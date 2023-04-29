@@ -9,7 +9,11 @@ namespace checkCopied
 {
     internal class Git
     {
-        public void ClonarRepositorios(string rutaDestino, string rutaCsv)
+        /**
+         * se espera que el CSV tenga el formato
+         * email, nombre, url
+         */
+        public static void ClonarRepositorios(string rutaDestino, string rutaCsv)
         {
             // Lee el archivo CSV
             var lineas = File.ReadAllLines(rutaCsv);
@@ -18,8 +22,8 @@ namespace checkCopied
             {
                 // Parsea la línea del CSV para obtener el nombre del integrante y la URL del repositorio
                 var campos = linea.Split(',');
-                var nombreIntegrante = campos[0].Trim();
-                var urlRepositorio = campos[1].Trim();
+                var nombreIntegrante = campos[1].Trim();
+                var urlRepositorio = campos[2].Trim();
 
                 try
                 {
@@ -43,18 +47,19 @@ namespace checkCopied
             }
         }
 
-        public void InstallProjects(string rootPath)
+        public static void InstallProjects(string[] subdirectories)
         {
-            string[] subdirectories = Directory.GetDirectories(rootPath);
-            foreach (string subdirectory in subdirectories)
+            string npmPath = " C:\\Users\\gabym\\AppData\\Roaming\\npm\\npm.cmd";
+            for(int i = 0; i < subdirectories.Length; i++)
             {
+                Console.WriteLine($"Installing {subdirectories[i]} ({i + 1}/{subdirectories.Length})");
                 try
                 {
                     var proceso = new Process();
                     // Ejecuta "npm install" en la carpeta
-                    proceso.StartInfo.FileName = "npm";
+                    proceso.StartInfo.FileName = npmPath;
                     proceso.StartInfo.Arguments = "install";
-                    proceso.StartInfo.WorkingDirectory = subdirectory;
+                    proceso.StartInfo.WorkingDirectory = subdirectories[i];
                     proceso.Start();
                     proceso.WaitForExit();
                 }

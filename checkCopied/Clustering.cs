@@ -1,11 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Newtonsoft.Json;
 
 namespace checkCopied
 {
+    public class Cluster
+    {
+        public double Threshold { get; set; }
+        public List<string> Members { get; set; }
+        public List<Cluster> Clusters { get; set; }
+
+        public Cluster(double threshold, List<string> members)
+        {
+            Threshold = threshold;
+            Members = members;
+            Clusters = new List<Cluster>();
+        }
+    }
+
     internal class Clustering
     {
         public static void PrintClusters(List<List<string>> clusters)
@@ -23,10 +33,15 @@ namespace checkCopied
             }
             Console.WriteLine("]");
         }
-        public static List<List<string>> HierarchicalClustering(double[,] similarityMatrix, string[] projectNames, double threshold)
+        public static List<List<string>> HierarchicalClustering(Dictionary<string, Dictionary<string, double>> similarityDic, double threshold)
         {
+            // Se asume que similarityDic representa una matriz de similarity, pero con índices nombrados
+            // Por lo tanto, las claves del diccionario externo serán las mismas que las internas
+
+            // Obtener un arreglo con las claves de los diccionarios
+            var keys = new List<string>(similarityDic.Keys);
             // Inicializar clusters con cada proyecto como un cluster individual
-            List<List<string>> clusters = projectNames.Select((p) => new List<string> { p }).ToList();
+            List<List<string>> clusters = keys.Select(key => new List<string> { key }).ToList();
 
             // Mientras haya más de un cluster, seguir agrupando
             while (clusters.Count > 1)
@@ -38,7 +53,7 @@ namespace checkCopied
                 {
                     for (int j = i + 1; j < clusters.Count; j++)
                     {
-                        double sim = AverageLinkage(similarityMatrix, projectNames, clusters[i], clusters[j]);
+                        double sim = AverageLinkage(similarityDic, clusters[i], clusters[j]);
                         if (sim > maxSim)
                         {
                             maxSim = sim;
@@ -63,31 +78,72 @@ namespace checkCopied
         }
 
         // Función para calcular la similitud promedio entre dos clusters usando linkage promedio
-        private static double AverageLinkage(double[,] similarityMatrix, string[] projectNames, List<string> cluster1, List<string> cluster2)
+        private static double AverageLinkage(Dictionary<string, Dictionary<string, double>> similarityMatrix, List<string> cluster1, List<string> cluster2)
         {
             double sim = 0;
             foreach (string p1 in cluster1)
             {
                 foreach (string p2 in cluster2)
                 {
-                    int i = IndexOf(projectNames, p1);
-                    int j = IndexOf(projectNames, p2);
-                    sim += similarityMatrix[i, j];
+                    sim += similarityMatrix[p1][p2];
                 }
             }
             sim /= (cluster1.Count * cluster2.Count);
             return sim;
         }
 
-        // Función auxiliar para encontrar el índice de un proyecto en la lista de nombres de proyectos
-        private static int IndexOf(string[] projectNames, string projectName)
+        public static Cluster HierarchicalClusteringTree(Dictionary<string, Dictionary<string, double>> similarityDic, double thresholdStep = 0.1)
         {
-            for (int i = 0; i < projectNames.Length; i++)
+            List<string> allMembers = new List<string>(similarityDic.Keys);
+            Cluster rootNode = new Cluster(0, allMembers);
+            BuildClusterTree(similarityDic, rootNode, thresholdStep);
+            return rootNode;
+        }
+
+        private static void BuildClusterTree(Dictionary<string, Dictionary<string, double>> similarityDic, Cluster parentNode, double thresholdStep)
+        {
+            double currentThreshold = parentNode.Threshold + thresholdStep;
+
+            List<List<string>> clusters = HierarchicalClustering(similarityDic, currentThreshold);
+
+            // Si todos los elementos están en un único grupo, no creamos subgrupos
+            if (clusters.Count == 1)
             {
-                if (projectNames[i] == projectName)
-                    return i;
+                return;
             }
-            return -1;
+
+            // Si hay más de un grupo, los agregamos como subgrupos al nodo actual
+            parentNode.Clusters = clusters.Select(cluster => new Cluster(currentThreshold, cluster)).ToList();
+
+            // Llamamos a la función de forma recursiva en cada subgrupo
+            foreach (Cluster childNode in parentNode.Clusters)
+            {
+                Dictionary<string, Dictionary<string, double>> subSimilarityDic = CreateSubSimilarityDic(similarityDic, childNode.Members);
+                BuildClusterTree(subSimilarityDic, childNode, thresholdStep);
+            }
+        }
+
+        private static Dictionary<string, Dictionary<string, double>> CreateSubSimilarityDic(Dictionary<string, Dictionary<string, double>> similarityDic, List<string> members)
+        {
+            return members.ToDictionary(
+                member => member,
+                member => members.ToDictionary(
+                    otherMember => otherMember,
+                    otherMember => similarityDic[member][otherMember]
+                )
+            );
+        }
+
+        public static void WriteClusterToJsonFile(Cluster cluster, string fileName)
+        {
+            JsonSerializerSettings settings = new JsonSerializerSettings
+            {
+                Formatting = Formatting.Indented,
+                NullValueHandling = NullValueHandling.Ignore
+            };
+
+            string json = JsonConvert.SerializeObject(cluster, settings);
+            File.WriteAllText(fileName, json);
         }
     }
 }

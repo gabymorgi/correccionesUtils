@@ -55,6 +55,10 @@ namespace checkCopied
                 string[] dirs = Directory.GetDirectories(srcPath);
                 foreach (string dir in dirs)
                 {
+                    if (Path.GetFileName(dir) == "node_modules")
+                    {
+                        continue;
+                    }
                     string dirName = Path.GetFileName(dir);
                     var destination = Path.Combine(folderPath, dirName);
                     Directory.Move(dir, destination);

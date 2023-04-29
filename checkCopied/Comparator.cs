@@ -2,58 +2,27 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace checkCopied
 {
+    public class ProjectComparison
+    {
+        public string Project1Id { get; set; }
+        public string Project2Id { get; set; }
+        public double Similarity { get; set; }
+
+        public ProjectComparison(string project1Id, string project2Id, double similarity)
+        {
+            Project1Id = project1Id;
+            Project2Id = project2Id;
+            Similarity = similarity;
+        }
+    }
+
     internal class Comparator
     {
-        [Obsolete("CompareStrings is deprecated, please use CompareStringsByTokens instead.")]
-        private static double CompareStrings(string str1, string str2)
-        {
-            if (string.IsNullOrEmpty(str1) || string.IsNullOrEmpty(str2))
-            {
-                return 0;
-            }
-            int[,] scores = new int[str1.Length + 1, str2.Length + 1];
-            int maxScore = 0;
-
-            for (int i = 1; i <= str1.Length; i++)
-            {
-                for (int j = 1; j <= str2.Length; j++)
-                {
-                    if (str1[i - 1] == str2[j - 1])
-                    {
-                        scores[i, j] = scores[i - 1, j - 1] + 1;
-
-                        if (scores[i, j] > maxScore)
-                        {
-                            maxScore = scores[i, j];
-                        }
-                    }
-                }
-            }
-
-            return (double)maxScore / Math.Max(str1.Length, str2.Length);
-        }
-
-        [Obsolete("CompareFiles is deprecated, please use CompareFileWithWindow instead.")]
-        private static double CompareFiles(string path1, string path2)
-        {
-            string[] file1Lines = File.ReadAllLines(path1);
-            string[] file2Lines = File.ReadAllLines(path2);
-            int totalLines = Math.Min(file1Lines.Length, file2Lines.Length);
-            double similaritySum = 0;
-
-            for (int i = 0; i < totalLines; i++)
-            {
-                double similarity = CompareStringsByTokens(file1Lines[i], file2Lines[i]);
-                similaritySum += similarity;
-            }
-
-            return similaritySum / totalLines;
-        }
-
         public static List<string> Tokenize(string str)
         {
             List<string> tokens = new List<string>();
@@ -265,32 +234,113 @@ namespace checkCopied
             return averageSimilarity;
         }
 
-        public static double[,] GetComparisionMatrix(string[] projectFolders)
+        public static Dictionary<string, Dictionary<string, double>> GetComparisionDic(string[] projectFolders)
         {
             int numProjects = projectFolders.Length;
-            var similarityMatrix = new double[numProjects, numProjects];
+            var similarityDic = new Dictionary<string, Dictionary<string, double>>(numProjects);
+            // initialize every sub dictionary
+            for (int i = 0; i < numProjects; i++)
+            {
+                similarityDic[projectFolders[i]] = new Dictionary<string, double>(numProjects);
+            }
 
             for (int i = 0; i < numProjects; i++)
             {
+                string project1Id = projectFolders[i];
+
                 for (int j = i; j < numProjects; j++)
                 {
+                    string project2Id = projectFolders[j];
+                    double similarity;
                     if (i == j)
                     {
-                        similarityMatrix[i, j] = 1.0;
+                        similarity = 1.0;
                     }
                     else
                     {
-                        var project1Path = projectFolders[i];
-                        var project2Path = projectFolders[j];
-                        var similarity = CompareProjects(project1Path, project2Path);
-
-                        similarityMatrix[i, j] = similarity;
-                        similarityMatrix[j, i] = similarity;
+                        similarity = CompareProjects(project1Id, project2Id);
                     }
+                    similarityDic[project1Id][project2Id] = similarity;
+                    similarityDic[project2Id][project1Id] = similarity;
                 }
+
                 Console.WriteLine($"Proyecto {i + 1} de {numProjects} procesado");
             }
-            return similarityMatrix;
+            return similarityDic;
+        }
+
+        public static void PrintComparisionDic(Dictionary<string, Dictionary<string, double>> comparisionDic, string file)
+        {
+            // Se asume que comparisionDic representa una matriz de comparasion, pero con índices nombrados
+            // Por lo tanto, las claves del diccionario externo serán las mismas que las internas
+
+            // Obtener un arreglo con las claves de los diccionarios
+            var keys = new List<string>(comparisionDic.Keys);
+
+            var csvContent = new StringBuilder();
+
+            // Construcción del header
+            csvContent.Append("Proyecto");
+            foreach (var key in keys)
+            {
+                csvContent.Append($",{key}");
+            }
+            csvContent.AppendLine();
+
+            // rows
+            foreach (var key_i in keys)
+            {
+                csvContent.Append(key_i);
+
+                // columns
+                foreach (var key_j in keys)
+                {
+                    csvContent.Append($",{comparisionDic[key_i][key_j].ToString("F2")}");
+                }
+                csvContent.AppendLine();
+            }
+
+            // Escribir el contenido CSV en el archivo
+            File.WriteAllText(file, csvContent.ToString());
+        }
+
+        public static Dictionary<string, Dictionary<string, double>> ReadComparisionDicFromCsv(string file)
+        {
+            string[] lines = File.ReadAllLines(file);
+
+            if (lines.Length < 2) // Se necesita al menos 2 líneas: encabezados y una fila de datos
+            {
+                throw new InvalidDataException("El archivo CSV no contiene suficientes líneas.");
+            }
+
+            var headerValues = lines[0].Split(',');
+            int numProjects = headerValues.Length - 1;
+            var comparisionDic = new Dictionary<string, Dictionary<string, double>>(numProjects);
+            for (int i = 1; i < numProjects; i++)
+            {
+                comparisionDic[headerValues[i]] = new Dictionary<string, double>(numProjects);
+            }
+
+            for (int i = 1; i < lines.Length; i++)
+            {
+                string[] values = lines[i].Split(',');
+
+                if (values.Length != numProjects + 1) // Se espera un ID de proyecto y los valores de similitud
+                {
+                    throw new InvalidDataException($"La línea {i + 1} del archivo CSV no contiene la cantidad correcta de valores.");
+                }
+
+                string project1Id = values[0];
+
+                for (int j = 1; j < values.Length; j++)
+                {
+                    string project2Id = headerValues[j];
+                    double.TryParse(values[j], out double similarity);
+                    comparisionDic[project1Id][project2Id] = similarity;
+                }
+            }
+
+            return comparisionDic;
         }
     }
 }

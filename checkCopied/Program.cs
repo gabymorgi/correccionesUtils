@@ -4,31 +4,41 @@ using Microsoft.CodeAnalysis;
 using System.Diagnostics;
 using System.Text;
 
-
-
-Console.WriteLine("Hello, World!");
-
-string mainFolder = @"D:\Projects\2022-12-entregas";
-double threshold = 0.70;
-
-//var file1 = @"D:\Projects\2022-12-entregas\AlejandroLopez_MauricioAndresAbrilVilladiego\src\App.jsx";
-//var file2 = @"D:\Projects\2022-12-entregas\AndresFelipeVelezPassos\src\App.jsx";
-//var asdf = Comparator.CompareFileWithWindow(file1, file2);
-//Console.WriteLine(asdf);
-
-MailSender.SendEmail("gabymorgi@gmail.com", "Test", "Hola gabito");
-return 0;
-
-
 Stopwatch stopwatch = new Stopwatch();
 stopwatch.Start();
 
+Console.WriteLine("Hello, World!");
+
+string mainFolder = @"D:\Projects\2023-04-finales";
+double threshold = 0.70;
+
 var projectFolders = Directory.GetDirectories(mainFolder);
 
-Prettier.FormatSubfolders(projectFolders);
-var comparisionMatrix = Comparator.GetComparisionMatrix(projectFolders);
-var clusters = Clustering.HierarchicalClustering(comparisionMatrix, projectFolders, threshold);
-Clustering.PrintClusters(clusters);
+
+//MailSender.SendEmail("gabymorgi@gmail.com", "Test", "Hola gabito");
+//return 0;
+
+//STEP 1
+//make a csv with format: email, name, git
+//get rid of ñ and accents
+//Git.ClonarRepositorios(mainFolder, $"{mainFolder}/list.csv");
+
+//STEP 2
+//delete node_modules, public and .git folders
+// NOT IMPLEMENTED YET
+
+//STEP 3
+//Run prettier on all files
+//Prettier.FormatSubfolders(projectFolders); NOT IMPLEMENTED YET
+
+//STEP 4
+//var comparisionDic = Comparator.GetComparisionDic(projectFolders);
+//Comparator.PrintComparisionDic(comparisionDic, $"{mainFolder}/comparisionDic.csv");
+//var clusters = Clustering.HierarchicalClustering(comparisionDic, projectFolders, threshold);
+//Clustering.PrintClusters(clusters);
+
+//STEP 5 install projects
+Git.InstallProjects(projectFolders);
 
 stopwatch.Stop();
 Console.WriteLine($"Time elapsed: {stopwatch.Elapsed}");
