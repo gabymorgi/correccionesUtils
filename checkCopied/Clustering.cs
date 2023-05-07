@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace checkCopied
 {
@@ -13,6 +14,40 @@ namespace checkCopied
             Threshold = threshold;
             Members = members;
             Clusters = new List<Cluster>();
+        }
+    }
+
+    public class ClusterJsonConverter : JsonConverter<Cluster>
+    {
+        public override void WriteJson(JsonWriter writer, Cluster? value, JsonSerializer serializer)
+        {
+            if (value == null)
+            {
+                writer.WriteNull();
+                return;
+            }
+
+            writer.WriteStartObject();
+
+            if (value.Clusters.Count > 0)
+            {
+                writer.WritePropertyName("threshold");
+                writer.WriteValue(value.Threshold.ToString("F2"));
+                writer.WritePropertyName("clusters");
+                serializer.Serialize(writer, value.Clusters);
+            }
+            else
+            {
+                writer.WritePropertyName("members");
+                serializer.Serialize(writer, value.Members);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        public override Cluster ReadJson(JsonReader reader, Type objectType, Cluster? existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            throw new NotImplementedException("La deserialización no está implementada.");
         }
     }
 
@@ -102,12 +137,25 @@ namespace checkCopied
 
         private static void BuildClusterTree(Dictionary<string, Dictionary<string, double>> similarityDic, Cluster parentNode, double thresholdStep)
         {
+            // si el nodo actual tiene un solo elemento, no es necesario continuar
+            if (parentNode.Members.Count == 1)
+            {
+                return;
+            }
             double currentThreshold = parentNode.Threshold + thresholdStep;
 
             List<List<string>> clusters = HierarchicalClustering(similarityDic, currentThreshold);
 
-            // Si todos los elementos están en un único grupo, no creamos subgrupos
-            if (clusters.Count == 1)
+            // Si todos los elementos están en un único grupo, aumentar el umbral y volver a intentar
+            while (clusters.Count == 1)
+            {
+                parentNode.Threshold = currentThreshold;
+                currentThreshold += thresholdStep;
+                clusters = HierarchicalClustering(similarityDic, currentThreshold);
+            }
+
+            // Si cada elemento están en un único grupo, no es necesario continuar
+            if (clusters.Count >= similarityDic.Count)
             {
                 return;
             }
@@ -118,6 +166,10 @@ namespace checkCopied
             // Llamamos a la función de forma recursiva en cada subgrupo
             foreach (Cluster childNode in parentNode.Clusters)
             {
+                if (childNode.Members.Count == 1)
+                {
+                    continue;
+                }
                 Dictionary<string, Dictionary<string, double>> subSimilarityDic = CreateSubSimilarityDic(similarityDic, childNode.Members);
                 BuildClusterTree(subSimilarityDic, childNode, thresholdStep);
             }
@@ -136,10 +188,14 @@ namespace checkCopied
 
         public static void WriteClusterToJsonFile(Cluster cluster, string fileName)
         {
-            JsonSerializerSettings settings = new JsonSerializerSettings
+            var settings = new JsonSerializerSettings
             {
+                Converters = { new ClusterJsonConverter() },
                 Formatting = Formatting.Indented,
-                NullValueHandling = NullValueHandling.Ignore
+                ContractResolver = new DefaultContractResolver
+                {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                }
             };
 
             string json = JsonConvert.SerializeObject(cluster, settings);

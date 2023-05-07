@@ -7,20 +7,6 @@ using System.Threading.Tasks;
 
 namespace checkCopied
 {
-    public class ProjectComparison
-    {
-        public string Project1Id { get; set; }
-        public string Project2Id { get; set; }
-        public double Similarity { get; set; }
-
-        public ProjectComparison(string project1Id, string project2Id, double similarity)
-        {
-            Project1Id = project1Id;
-            Project2Id = project2Id;
-            Similarity = similarity;
-        }
-    }
-
     internal class Comparator
     {
         public static List<string> Tokenize(string str)
@@ -246,11 +232,11 @@ namespace checkCopied
 
             for (int i = 0; i < numProjects; i++)
             {
-                string project1Id = projectFolders[i];
+                string project1Id = projectFolders[i].Split('\\')[^-1];
 
                 for (int j = i; j < numProjects; j++)
                 {
-                    string project2Id = projectFolders[j];
+                    string project2Id = projectFolders[j].Split('\\')[^-1];
                     double similarity;
                     if (i == j)
                     {
@@ -258,7 +244,7 @@ namespace checkCopied
                     }
                     else
                     {
-                        similarity = CompareProjects(project1Id, project2Id);
+                        similarity = CompareProjects(projectFolders[i], projectFolders[j]);
                     }
                     similarityDic[project1Id][project2Id] = similarity;
                     similarityDic[project2Id][project1Id] = similarity;
@@ -295,7 +281,8 @@ namespace checkCopied
                 // columns
                 foreach (var key_j in keys)
                 {
-                    csvContent.Append($",{comparisionDic[key_i][key_j].ToString("F2")}");
+                    // apend an int with value * 100
+                    csvContent.Append($",{(int)(comparisionDic[key_i][key_j] * 100)}");
                 }
                 csvContent.AppendLine();
             }
@@ -316,7 +303,7 @@ namespace checkCopied
             var headerValues = lines[0].Split(',');
             int numProjects = headerValues.Length - 1;
             var comparisionDic = new Dictionary<string, Dictionary<string, double>>(numProjects);
-            for (int i = 1; i < numProjects; i++)
+            for (int i = 1; i < headerValues.Length; i++)
             {
                 comparisionDic[headerValues[i]] = new Dictionary<string, double>(numProjects);
             }
@@ -336,7 +323,7 @@ namespace checkCopied
                 {
                     string project2Id = headerValues[j];
                     double.TryParse(values[j], out double similarity);
-                    comparisionDic[project1Id][project2Id] = similarity;
+                    comparisionDic[project1Id][project2Id] = similarity / 100;
                 }
             }
 

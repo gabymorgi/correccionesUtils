@@ -39,6 +39,7 @@ namespace checkCopied
         public static void MoveToRoot(string folderPath)
         {
             string srcPath = FindSrcFolder(folderPath);
+            Console.WriteLine($"srcPath: {srcPath}");
 
             // Si la carpeta "src" no existe, busca recursivamente en las subcarpetas
             if (srcPath != "" && srcPath != folderPath)
@@ -49,6 +50,11 @@ namespace checkCopied
                 {
                     var fileName = Path.GetFileName(file);
                     var destination = Path.Combine(folderPath, fileName);
+                    Console.WriteLine($"Moving {file} to {destination}");
+                    if (File.Exists(destination))
+                    {
+                        File.Delete(destination);
+                    }
                     File.Move(file, destination);
                 }
 
@@ -61,10 +67,16 @@ namespace checkCopied
                     }
                     string dirName = Path.GetFileName(dir);
                     var destination = Path.Combine(folderPath, dirName);
+                    Console.WriteLine($"Moving {dir} to {destination}");
+                    if (Directory.Exists(destination))
+                    {
+                        Directory.Delete(destination, true); // El segundo argumento 'true' permite eliminar el directorio de destino incluso si no está vacío.
+                    }
                     Directory.Move(dir, destination);
                 }
 
                 // Elimina la carpeta "src"
+                Console.WriteLine($"Deleting {srcPath}");
                 Directory.Delete(srcPath);
             }
         }
@@ -105,10 +117,10 @@ namespace checkCopied
         public static void RunPrettier(string folderPath)
         {
             // Ruta del ejecutable de npx
-            string npxPath = " C:\\Users\\gabym\\AppData\\Roaming\\npm\\npx.cmd";
+            string npxPath = "C:\\Users\\gabym\\AppData\\Roaming\\npm\\npx.cmd";
 
             // Argumentos para el comando de prettier
-            string prettierArgs = $"npx prettier --write \"{folderPath}/**/*.{{js,jsx,ts,tsx}}\" --ignore-path \"{folderPath}\\.prettierignore\" --config \"{folderPath}\\.prettierrc.json\"";
+            string prettierArgs = $"npx prettier --write \"{folderPath}/src/**/*.{{js,jsx,ts,tsx}}\" --ignore-path \"{folderPath}\\.prettierignore\" --config \"{folderPath}\\.prettierrc.json\"";
 
             CreatePrettierIgnore(folderPath);
             CreatePrettierConfig(folderPath);
@@ -125,9 +137,10 @@ namespace checkCopied
             };
             Process process = new Process { StartInfo = startInfo };
 
+            Console.WriteLine($"Running {startInfo.FileName} {startInfo.Arguments}");
             // Iniciar el proceso y esperar a que termine
             process.Start();
-            process.WaitForExit();
+            process.WaitForExit(30000);
 
             // Leer la salida del comando de prettier
             string output = process.StandardOutput.ReadToEnd();
@@ -150,9 +163,12 @@ namespace checkCopied
             // Iteramos sobre cada subdirectorio
             foreach (string folder in folderPaths)
             {
-                //remove all unnecessary sub folders
-                //MoveToRoot(subfolder);
+                Console.WriteLine($"Procesing {folder}");
 
+                //remove all unnecessary sub folders
+                MoveToRoot(folder);
+
+                Console.WriteLine($"Running prettier on {folder}");
                 // Ejecutamos runPrettier para el subdirectorio
                 RunPrettier(folder);
 

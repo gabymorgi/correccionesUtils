@@ -3,14 +3,15 @@ using checkCopied;
 using Microsoft.CodeAnalysis;
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 
 Stopwatch stopwatch = new Stopwatch();
 stopwatch.Start();
 
 Console.WriteLine("Hello, World!");
 
-string mainFolder = @"D:\Projects\2023-04-finales";
-double threshold = 0.70;
+string mainFolder = @"D:\Projects\2023-04-finales\react-monorepo\projects";
+double thresholdStep = 0.05;
 
 var projectFolders = Directory.GetDirectories(mainFolder);
 
@@ -20,25 +21,29 @@ var projectFolders = Directory.GetDirectories(mainFolder);
 
 //STEP 1
 //make a csv with format: email, name, git
-//get rid of ñ and accents
 //Git.ClonarRepositorios(mainFolder, $"{mainFolder}/list.csv");
 
 //STEP 2
-//delete node_modules, public and .git folders
+//delete node_modules and .git folders
 // NOT IMPLEMENTED YET
 
 //STEP 3
 //Run prettier on all files
-//Prettier.FormatSubfolders(projectFolders); NOT IMPLEMENTED YET
+//Prettier.FormatSubfolders(projectFolders);
 
 //STEP 4
 //var comparisionDic = Comparator.GetComparisionDic(projectFolders);
 //Comparator.PrintComparisionDic(comparisionDic, $"{mainFolder}/comparisionDic.csv");
-//var clusters = Clustering.HierarchicalClustering(comparisionDic, projectFolders, threshold);
-//Clustering.PrintClusters(clusters);
+//var comparisionDic = Comparator.ReadComparisionDicFromCsv($"{mainFolder}/comparisionDic.csv");
+//var clusters = Clustering.HierarchicalClusteringTree(comparisionDic, thresholdStep);
+//Clustering.WriteClusterToJsonFile(clusters, $"{mainFolder}/clusterTree.json");
 
-//STEP 5 install projects
-Git.InstallProjects(projectFolders);
+//DEPRECATED STEP 5 install projects
+//Git.InstallProjects(projectFolders);
+
+//STEP 6 monorepo
+Git.InitializeYarnAndConfigure(@"D:\Projects\2023-04-finales\react-monorepo");
+//Git.renameProjects(projectFolders);
 
 stopwatch.Stop();
 Console.WriteLine($"Time elapsed: {stopwatch.Elapsed}");
