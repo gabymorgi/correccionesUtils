@@ -156,6 +156,7 @@ namespace checkCopied
         {
             int totalSubfolders = config.ProjectFolders.Length;
             int doneSubfolders = 0;
+            Console.WriteLine(config.ProjectFolders);
 
             // Iteramos sobre cada subdirectorio
             foreach (string folder in config.ProjectFolders)

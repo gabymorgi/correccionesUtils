@@ -69,8 +69,9 @@ namespace checkCopied
 
                 for (int i = 0; i < headerFields.Length; i++)
                 {
-                    if (headerFields[0].ToLower() == "nombre") indexName = i;
-                    if (headerFields[0].ToLower() == "url") indexURL = i;
+                    //Console.WriteLine(headerFields[i]);
+                    if (headerFields[i].ToLower() == "nombre") indexName = i;
+                    if (headerFields[i].ToLower() == "url") indexURL = i;
                 }
             }
             if (lineas.Length == 0 || indexName < 0 || indexURL < 0)
@@ -97,6 +98,9 @@ namespace checkCopied
             var errors = new List<(string, string)>();
 
             Directory.CreateDirectory(rutaDestino);
+            int successRepos = 0;
+            int errorRepos = 0;
+            int totalRepos = repoList.Count;
 
             foreach (var repo in repoList)
             {
@@ -113,22 +117,37 @@ namespace checkCopied
                     var proceso = new Process();
                     proceso.StartInfo.FileName = "git";
                     proceso.StartInfo.Arguments = $"clone {urlRepositorio} {rutaCarpeta}";
+                    proceso.StartInfo.UseShellExecute = false;
+                    proceso.StartInfo.RedirectStandardError = true;
                     proceso.Start();
+                    string errorOutput = proceso.StandardError.ReadToEnd();
                     proceso.WaitForExit();
 
-                    
+                    if (proceso.ExitCode == 0)
+                    {
+                        successRepos++;
+                        UserInterface.WriteLine($"Clonado {nombreIntegrante}: ({successRepos + errorRepos}/{totalRepos})", ConsoleColor.Green);
+                    } else
+                    {
+                        errorRepos++;
+                        errors.Add((nombreIntegrante, errorOutput));
+                        UserInterface.WriteLine($"Error {nombreIntegrante}: ({successRepos + errorRepos}/{totalRepos})", ConsoleColor.Red);
+                    }
                 }
                 catch (Exception ex)
                 {
+                    errorRepos++;
                     errors.Add((nombreIntegrante, ex.Message));
+                    UserInterface.WriteLine($"Error {nombreIntegrante}: ({successRepos + errorRepos}/{totalRepos})", ConsoleColor.Red);
                 }
+                
             }
             if (errors.Count > 0)
             {
                 UserInterface.WriteLine("No se pudieron clonar los siguientes repos, revisalos manualmente", ConsoleColor.Red);
                 foreach (var error in errors)
                 {
-                    Console.WriteLine($"{error.Item1}: {error.Item2}");
+                    UserInterface.WriteLine($"{error.Item1}: {error.Item2}", ConsoleColor.Red);
                 }
             }
         }
@@ -216,6 +235,23 @@ namespace checkCopied
             packageJson["workspaces"] = JArray.Parse("[\"projects/*\"]");
 
             File.WriteAllText(packageJsonPath, packageJson.ToString());
+        }
+
+        public static void YarnStart(string folderPath, string yarnPath)
+        {
+            Process process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = yarnPath,
+                    Arguments = "install",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = folderPath
+                }
+            };
+            process.Start();
+            process.WaitForExit();
         }
     }
 }

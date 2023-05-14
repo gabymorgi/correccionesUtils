@@ -227,16 +227,17 @@ namespace checkCopied
             // initialize every sub dictionary
             for (int i = 0; i < numProjects; i++)
             {
-                similarityDic[projectFolders[i]] = new Dictionary<string, double>(numProjects);
+                string key = projectFolders[i].Split('\\')[^1];
+                similarityDic[key] = new Dictionary<string, double>(numProjects);
             }
 
             for (int i = 0; i < numProjects; i++)
             {
-                string project1Id = projectFolders[i].Split('\\')[^-1];
+                string project1Id = projectFolders[i].Split('\\')[^1];
 
                 for (int j = i; j < numProjects; j++)
                 {
-                    string project2Id = projectFolders[j].Split('\\')[^-1];
+                    string project2Id = projectFolders[j].Split('\\')[^1];
                     double similarity;
                     if (i == j)
                     {

@@ -24,7 +24,10 @@ var MenuOptions = new UserInterface.MenuOption[]
     new UserInterface.MenuOption{
         Value = "2",
         Name = "Clonar repos",
-        Action = () => Git.ClonarRepositorios(config.ProjectsMainFolder),
+        Action = () => {
+            Git.ClonarRepositorios(config.ProjectsMainFolder);
+            config.MainFolder = config.MainFolder; //force recalculate project repos
+        },
     },
     new UserInterface.MenuOption{
         Value = "3",
@@ -70,6 +73,7 @@ var MenuOptions = new UserInterface.MenuOption[]
         Action = () => {
             Git.InitializeYarnAndConfigure(config.MainFolder, config.YarnPath);
             Git.RenameProjects(config.ProjectFolders);
+            Git.YarnStart(config.MainFolder, config.YarnPath);
         },
     },
     new UserInterface.MenuOption
