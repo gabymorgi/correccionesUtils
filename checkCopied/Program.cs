@@ -5,46 +5,108 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
-Stopwatch stopwatch = new Stopwatch();
-stopwatch.Start();
+Console.WriteLine("Welcome!");
 
-Console.WriteLine("Hello, World!");
+var config = new Configuration();
 
-string mainFolder = @"D:\Projects\2023-04-finales\react-monorepo\projects";
-double thresholdStep = 0.05;
+var MenuOptions = new UserInterface.MenuOption[]
+{
+    new UserInterface.MenuOption{
+        Value = "0",
+        Name = "Change Main Folder",
+        Action = () => config.ConfigureMainPath(),
+    },
+    new UserInterface.MenuOption{
+        Value = "1",
+        Name = "Configure",
+        Action = () => config.CreateConfiguration(),
+    },
+    new UserInterface.MenuOption{
+        Value = "2",
+        Name = "Clonar repos",
+        Action = () => Git.ClonarRepositorios(config.ProjectsMainFolder),
+    },
+    new UserInterface.MenuOption{
+        Value = "3",
+        Name = "Run Prettier",
+        Action = () => Prettier.FormatSubfolders(config),
+    },
+    new UserInterface.MenuOption{
+        Value = "4",
+        Name = "Run Comparator",
+        Action = () => {
+            try
+            {
+                var comparisionDic = Comparator.GetComparisionDic(config.ProjectFolders);
+                Comparator.PrintComparisionDic(comparisionDic, $"{config.MainFolder}/comparisionDic.csv");
+                Console.WriteLine($"Success: You can run clustering or find the comparision matrix at {config.MainFolder}/comparisionDic.csv");
+            } catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        },
+    },
+    new UserInterface.MenuOption
+    {
+        Value = "5",
+        Name = "Run Clustering",
+        Action = () =>
+        {
+            try
+            {
+                var comparisionDic = Comparator.ReadComparisionDicFromCsv($"{config.MainFolder}/comparisionDic.csv");
+                var clusters = Clustering.HierarchicalClusteringTree(comparisionDic, config.ThresholdStep);
+                Clustering.WriteClusterToJsonFile(clusters, $"{config.MainFolder}/clusterTree.json");
+                Console.WriteLine($"Success: You can find the cluster JSON at {config.MainFolder}/clusterTree.json");
+            } catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
+        },
+    },
+    new UserInterface.MenuOption{
+        Value = "6",
+        Name = "Create monorepo",
+        Action = () => {
+            Git.InitializeYarnAndConfigure(config.MainFolder, config.YarnPath);
+            Git.RenameProjects(config.ProjectFolders);
+        },
+    },
+    new UserInterface.MenuOption
+    {
+        Value = "7",
+        Name = "Run projects",
+        Action = () =>
+        {
+            Console.WriteLine("Run de following command on your console to run each project");
+            UserInterface.WriteLine("yarn workspace <project-name> run <command>", ConsoleColor.Green);
+            if (File.Exists($"{config.MainFolder}/clusterTree.json")) {
+                Console.WriteLine("Here you have the list ordered by the clusters");
+                var clusters = Clustering.LoadClusterFromJsonFile($"{config.MainFolder}/clusterTree.json");
+                var clusterList = Clustering.ClusterToList(clusters);
+                foreach (var cluster in clusterList)
+                {
+                    Console.WriteLine($"yarn workspace {cluster} run dev");
+                }
+            }
+        }
+    },
+    new UserInterface.MenuOption
+    {
+        Value = "q",
+        Name = "Quit",
+        Action = () => Environment.Exit(0),
+    },
+};
 
-var projectFolders = Directory.GetDirectories(mainFolder);
+while (true)
+{
+    UserInterface.PrintMenu(MenuOptions);
+}
 
 
 //MailSender.SendEmail("gabymorgi@gmail.com", "Test", "Hola gabito");
 //return 0;
 
-//STEP 1
-//make a csv with format: email, name, git
-//Git.ClonarRepositorios(mainFolder, $"{mainFolder}/list.csv");
-
-//STEP 2
-//delete node_modules and .git folders
-// NOT IMPLEMENTED YET
-
-//STEP 3
-//Run prettier on all files
-//Prettier.FormatSubfolders(projectFolders);
-
-//STEP 4
-//var comparisionDic = Comparator.GetComparisionDic(projectFolders);
-//Comparator.PrintComparisionDic(comparisionDic, $"{mainFolder}/comparisionDic.csv");
-//var comparisionDic = Comparator.ReadComparisionDicFromCsv($"{mainFolder}/comparisionDic.csv");
-//var clusters = Clustering.HierarchicalClusteringTree(comparisionDic, thresholdStep);
-//Clustering.WriteClusterToJsonFile(clusters, $"{mainFolder}/clusterTree.json");
-
 //DEPRECATED STEP 5 install projects
 //Git.InstallProjects(projectFolders);
-
-//STEP 6 monorepo
-Git.InitializeYarnAndConfigure(@"D:\Projects\2023-04-finales\react-monorepo");
-//Git.renameProjects(projectFolders);
-
-stopwatch.Stop();
-Console.WriteLine($"Time elapsed: {stopwatch.Elapsed}");
-

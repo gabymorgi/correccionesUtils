@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace checkCopied
@@ -47,7 +48,21 @@ namespace checkCopied
 
         public override Cluster ReadJson(JsonReader reader, Type objectType, Cluster? existingValue, bool hasExistingValue, JsonSerializer serializer)
         {
-            throw new NotImplementedException("La deserialización no está implementada.");
+            var jsonObject = JObject.Load(reader);
+
+            var cluster = new Cluster(0, new List<string>()); // Valores por defecto
+
+            if (jsonObject["threshold"] != null)
+            {
+                cluster.Threshold = jsonObject.Value<double>("threshold");
+                cluster.Clusters = jsonObject["clusters"]?.ToObject<List<Cluster>>(serializer) ?? new List<Cluster>();
+            }
+            else if (jsonObject["members"] != null)
+            {
+                cluster.Members = jsonObject["members"]?.ToObject<List<string>>(serializer) ?? new List<string>();
+            }
+
+            return cluster;
         }
     }
 
@@ -200,6 +215,43 @@ namespace checkCopied
 
             string json = JsonConvert.SerializeObject(cluster, settings);
             File.WriteAllText(fileName, json);
+        }
+
+        public static Cluster LoadClusterFromJsonFile(string fileName)
+        {
+            var settings = new JsonSerializerSettings
+            {
+                Converters = { new ClusterJsonConverter() },
+                ContractResolver = new DefaultContractResolver
+                {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                }
+            };
+
+            string json = File.ReadAllText(fileName);
+            return JsonConvert.DeserializeObject<Cluster>(json, settings) ?? new Cluster(0, new List<string>());
+        }
+
+        public static List<string> ClusterToList(Cluster cluster)
+        {
+            var membersList = new List<string>();
+
+            // Si el cluster tiene miembros, agregarlos a la lista
+            if (cluster.Members != null)
+            {
+                membersList.AddRange(cluster.Members);
+            }
+
+            // Si el cluster tiene sub-clusters, procesarlos recursivamente
+            if (cluster.Clusters != null)
+            {
+                foreach (var subCluster in cluster.Clusters)
+                {
+                    membersList.AddRange(ClusterToList(subCluster));
+                }
+            }
+
+            return membersList;
         }
     }
 }

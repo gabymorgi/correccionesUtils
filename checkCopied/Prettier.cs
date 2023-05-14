@@ -101,24 +101,21 @@ namespace checkCopied
             if (!File.Exists(configFilePath))
             {
                 string config = @"{
-            ""printWidth"": 120,
-            ""tabWidth"": 2,
-            ""semi"": false,
-            ""singleQuote"": true,
-            ""trailingComma"": ""all"",
-            ""quoteProps"": ""as-needed"",
-            ""jsxSingleQuote"": true,
-            ""bracketSameLine"": false
-        }";
+                    ""printWidth"": 120,
+                    ""tabWidth"": 2,
+                    ""semi"": false,
+                    ""singleQuote"": true,
+                    ""trailingComma"": ""all"",
+                    ""quoteProps"": ""as-needed"",
+                    ""jsxSingleQuote"": true,
+                    ""bracketSameLine"": false
+                }";
                 File.WriteAllText(configFilePath, config);
             }
         }
 
-        public static void RunPrettier(string folderPath)
+        public static void RunPrettier(string folderPath, string npxPath)
         {
-            // Ruta del ejecutable de npx
-            string npxPath = "C:\\Users\\gabym\\AppData\\Roaming\\npm\\npx.cmd";
-
             // Argumentos para el comando de prettier
             string prettierArgs = $"npx prettier --write \"{folderPath}/src/**/*.{{js,jsx,ts,tsx}}\" --ignore-path \"{folderPath}\\.prettierignore\" --config \"{folderPath}\\.prettierrc.json\"";
 
@@ -155,13 +152,13 @@ namespace checkCopied
             }
         }
 
-        public static void FormatSubfolders(string[] folderPaths)
+        public static void FormatSubfolders(Configuration config)
         {
-            int totalSubfolders = folderPaths.Length;
+            int totalSubfolders = config.ProjectFolders.Length;
             int doneSubfolders = 0;
 
             // Iteramos sobre cada subdirectorio
-            foreach (string folder in folderPaths)
+            foreach (string folder in config.ProjectFolders)
             {
                 Console.WriteLine($"Procesing {folder}");
 
@@ -170,7 +167,7 @@ namespace checkCopied
 
                 Console.WriteLine($"Running prettier on {folder}");
                 // Ejecutamos runPrettier para el subdirectorio
-                RunPrettier(folder);
+                RunPrettier(folder, config.NpxPath);
 
                 // Actualizamos el progreso
                 doneSubfolders++;

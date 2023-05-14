@@ -39,21 +39,69 @@ namespace checkCopied
             return sanitized;
         }
 
-        /**
-         * se espera que el CSV tenga el formato
-         * email, nombre, url
-         */
-        public static void ClonarRepositorios(string rutaDestino, string rutaCsv)
+        public static List<(string, string)> getRepoList()
+        {
+            
+            Error:
+            Console.WriteLine("Ingrese la ruta al csv con la lista de alumnos:");
+            UserInterface.WriteLine("Debe tener un header con las columnas 'nombre' y 'url'", ConsoleColor.Yellow);
+
+            string? rutaCSV = Console.ReadLine();
+
+            if (string.IsNullOrEmpty(rutaCSV))
+            {
+                UserInterface.WriteLine("La ruta no puede estar vacia", ConsoleColor.Red);
+                goto Error;
+            }
+
+            if (!File.Exists(rutaCSV))
+            {
+                UserInterface.WriteLine("El archivo no existe", ConsoleColor.Red);
+                goto Error;
+            }
+
+            var lineas = File.ReadAllLines(rutaCSV);
+            int indexName = -1;
+            int indexURL = -1;
+            if (lineas.Length > 0)
+            {
+                var headerFields = lineas[0].Split(',');
+
+                for (int i = 0; i < headerFields.Length; i++)
+                {
+                    if (headerFields[0].ToLower() == "nombre") indexName = i;
+                    if (headerFields[0].ToLower() == "url") indexURL = i;
+                }
+            }
+            if (lineas.Length == 0 || indexName < 0 || indexURL < 0)
+            {
+                UserInterface.WriteLine("Header values not found", ConsoleColor.Red);
+                goto Error;
+            }
+
+            var repoList = new List<(string, string)>();
+
+            for (int i = 1; i < lineas.Length; i++)
+            {
+                var fields = lineas[i].Split(",");
+                repoList.Add((SanitizeFileName(fields[indexName].Trim()), fields[indexURL].Trim()));
+            }
+
+            return repoList;
+        }
+
+        public static void ClonarRepositorios(string rutaDestino)
         {
             // Lee el archivo CSV
-            var lineas = File.ReadAllLines(rutaCsv);
+            var repoList = getRepoList();
+            var errors = new List<(string, string)>();
 
-            foreach (var linea in lineas)
+            Directory.CreateDirectory(rutaDestino);
+
+            foreach (var repo in repoList)
             {
-                // Parsea la línea del CSV para obtener el nombre del integrante y la URL del repositorio
-                var campos = linea.Split(',');
-                var nombreIntegrante = SanitizeFileName(campos[1].Trim());
-                var urlRepositorio = campos[2].Trim();
+                var nombreIntegrante = repo.Item1;
+                var urlRepositorio = repo.Item2;
 
                 try
                 {
@@ -72,11 +120,20 @@ namespace checkCopied
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Ocurrió un error en {nombreIntegrante}: {ex.Message}");
+                    errors.Add((nombreIntegrante, ex.Message));
+                }
+            }
+            if (errors.Count > 0)
+            {
+                UserInterface.WriteLine("No se pudieron clonar los siguientes repos, revisalos manualmente", ConsoleColor.Red);
+                foreach (var error in errors)
+                {
+                    Console.WriteLine($"{error.Item1}: {error.Item2}");
                 }
             }
         }
 
+        // deprecated
         public static void InstallProjects(string[] subdirectories)
         {
             string npmPath = " C:\\Users\\gabym\\AppData\\Roaming\\npm\\npm.cmd";
@@ -107,7 +164,7 @@ namespace checkCopied
             return validPackageName;
         }
 
-        public static void renameProjects(string[] subdirectories)
+        public static void RenameProjects(string[] subdirectories)
         {
             foreach (var directory in subdirectories)
             {
@@ -131,17 +188,14 @@ namespace checkCopied
             }
         }
 
-        public static void InitializeYarnAndConfigure(string folderPath)
+        public static void InitializeYarnAndConfigure(string folderPath, string yarnPath)
         {
             // Ejecuta `yarn init`
             Process process = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    //C:\\Users\\gabym\\AppData\\Roaming\\npm\\node_modules\\yarn\\bin
-                    //C:/Users/gabym/AppData/Local/Yarn/bin/yarn.cmd
-                    //"C:\Users\gabym\AppData\Roaming\npm\node_modules\yarn\bin\yarn.cmd"
-                    FileName = @"C:\Users\gabym\AppData\Roaming\npm\node_modules\yarn\bin\yarn.cmd",
+                    FileName = yarnPath,
                     Arguments = "init -y",
                     RedirectStandardOutput = true,
                     UseShellExecute = false,
