@@ -175,7 +175,7 @@ namespace checkCopied
             }
         }
 
-        static string GetValidPackageName(string folderName)
+        public static string GetValidPackageName(string folderName)
         {
             string lowerCaseName = folderName.ToLower();
             string validCharactersPattern = @"[^a-z0-9._-]+";

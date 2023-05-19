@@ -71,6 +71,9 @@ var MenuOptions = new UserInterface.MenuOption[]
         Value = "6",
         Name = "Create monorepo",
         Action = () => {
+            // yarn init -y
+            // change package.json on every project so it has a unique name
+            // yarn install
             Git.InitializeYarnAndConfigure(config.MainFolder, config.YarnPath);
             Git.RenameProjects(config.ProjectFolders);
             Git.YarnStart(config.MainFolder, config.YarnPath);
@@ -90,7 +93,7 @@ var MenuOptions = new UserInterface.MenuOption[]
                 var clusterList = Clustering.ClusterToList(clusters);
                 foreach (var cluster in clusterList)
                 {
-                    Console.WriteLine($"yarn workspace {cluster} run dev");
+                    Console.WriteLine($"yarn workspace {Git.GetValidPackageName(cluster)} run dev");
                 }
             }
         }

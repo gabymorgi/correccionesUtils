@@ -223,6 +223,7 @@ namespace checkCopied
 
                 UserInterface.WriteLine($"(actual value) {ThresholdStep}", ConsoleColor.Green);
                 newThreshold = Console.ReadLine() ?? ThresholdStep.ToString();
+                if (newThreshold == "") newThreshold = ThresholdStep.ToString();
             } while (!double.TryParse(newThreshold, out thresholdStep) || thresholdStep < 0 || thresholdStep > 1);
 
             ThresholdStep = thresholdStep;
